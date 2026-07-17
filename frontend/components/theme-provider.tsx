@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Moon, SunMedium } from 'lucide-react';
 
 const STORAGE_KEY = 'citybrain-settings';
 
@@ -13,6 +14,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       const parsed = stored ? JSON.parse(stored) : null;
       const theme = parsed?.theme === 'light' ? 'light' : 'dark';
+      setTheme(theme);
       document.documentElement.setAttribute('data-theme', theme);
     } catch {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -26,8 +28,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute('data-theme', theme);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme }));
-    } catch (e) {
-      // ignore storage write errors (private mode, etc.)
+    } catch {
+      // ignore storage write errors
     }
   }, [theme]);
 
@@ -44,8 +46,7 @@ export function ThemeToggle() {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       const parsed = stored ? JSON.parse(stored) : null;
       return parsed?.theme === 'light' ? 'light' : 'dark';
-    } catch (e) {
-      // ignore parse errors
+    } catch {
       return 'dark';
     }
   });
@@ -54,14 +55,19 @@ export function ThemeToggle() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  const handleToggle = useCallback(() => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   return (
     <button
       type="button"
-      onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300"
+      onClick={handleToggle}
+      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/15 focus-visible:outline-none"
       aria-label="Toggle theme"
     >
-      {theme === 'dark' ? 'Light' : 'Dark'}
+      {theme === 'dark' ? <SunMedium className="h-4 w-4 text-cyan-100" /> : <Moon className="h-4 w-4 text-slate-900" />}
+      <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
     </button>
   );
 }

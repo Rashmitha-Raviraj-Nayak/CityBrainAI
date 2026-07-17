@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { AlertTriangle, MapPin, ShieldCheck } from 'lucide-react';
+import { StatusBadge } from '@/components/ui-primitives';
 import type { IncidentRecord } from '@/services/incident-service';
 
 type MarkerTone = {
@@ -93,9 +94,7 @@ export function CommandCenterMap({ incidents }: { incidents: IncidentRecord[] })
                   <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">Focused incident</p>
                   <h4 className="mt-2 text-lg font-semibold text-white">{selectedIncident.title}</h4>
                 </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-slate-300">
-                  {selectedIncident.status}
-                </span>
+                <StatusBadge status={selectedIncident.status} />
               </div>
               <p className="mt-3 text-sm leading-7 text-slate-300">{selectedIncident.description}</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">

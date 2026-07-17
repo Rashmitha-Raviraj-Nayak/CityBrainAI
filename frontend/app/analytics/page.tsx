@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Clock3, TrendingUp, Sparkles, BarChart3, Gauge, Radar, Layers3 } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BarChart3, Clock3, Gauge, Sparkles, TrendingUp } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard-shell';
+import { MetricCard, RiskBadge, SectionHeader } from '@/components/ui-primitives';
 import { getIncidentDecisionSupport, getIncidentStats, subscribeToIncidents, type IncidentRecord } from '@/services/incident-service';
 
 export default function AnalyticsPage() {
@@ -67,25 +68,17 @@ export default function AnalyticsPage() {
     <DashboardShell>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-[24px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">{metric.label}</p>
-              {metric.positive ? <ArrowUpRight className="h-4 w-4 text-emerald-300" /> : <ArrowDownRight className="h-4 w-4 text-amber-300" />}
-            </div>
-            <p className="mt-3 text-3xl font-semibold text-white">{metric.value}</p>
-            <p className={`mt-2 text-sm ${metric.positive ? 'text-emerald-300' : 'text-amber-300'}`}>{metric.change} vs previous window</p>
-          </div>
+          <MetricCard key={metric.label} title={metric.label} value={metric.value} detail={`${metric.change} vs previous window`} accent={metric.positive ? 'emerald' : 'amber'} />
         ))}
       </div>
       <div className="mt-8 grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">Incident trends</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Operational momentum</h2>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-sm text-cyan-200"><Sparkles className="h-4 w-4" />Live data</div>
-          </div>
+          <SectionHeader
+            eyebrow="Incident trends"
+            title="Operational momentum"
+            subtitle="A live view of signal intake, response posture, and service pressure."
+            action={<div className="flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-sm text-cyan-200"><Sparkles className="h-4 w-4" />Live data</div>}
+          />
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
               { label: 'Signal intake', value: incidents.length || 0, icon: Activity },
@@ -129,7 +122,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
         <section className="rounded-[32px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
-          <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">Department performance</p>
+          <SectionHeader eyebrow="Department performance" title="Cross-agency workload" subtitle="How response teams are balancing active incidents and operational demand." />
           <div className="mt-6 space-y-3">
             {departmentMix.map(({ label, value }) => {
               const score = `${Math.min(100, 70 + value * 8)}%`;
@@ -152,6 +145,10 @@ export default function AnalyticsPage() {
               <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3"><span>Top risk areas</span><span className="font-semibold text-white">Market Street</span></div>
               <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3"><span>Prediction accuracy</span><span className="font-semibold text-white">0.91</span></div>
               <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3"><span>AI confidence trend</span><span className="font-semibold text-white">+0.04</span></div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <RiskBadge level="Elevated" />
+              <span className="text-sm text-slate-400">Current posture</span>
             </div>
           </div>
         </section>

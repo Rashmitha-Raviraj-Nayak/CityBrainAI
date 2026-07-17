@@ -8,6 +8,7 @@ import { IncidentForm } from '@/components/incident-form';
 import { LocationCard } from '@/components/location-card';
 import { AgentWorkflowTimeline } from '@/components/agent-workflow';
 import { CommandCenterMap } from '@/components/command-center-map';
+import { MetricCard } from '@/components/ui-primitives';
 import { useAuth } from '@/contexts/auth-context';
 import { getIncidentDecisionSupport, getIncidentStats, subscribeToIncidents, type IncidentRecord } from '@/services/incident-service';
 
@@ -56,29 +57,34 @@ export default function DashboardPage() {
     <DashboardShell>
       <div className="space-y-8">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">Operations center</p>
-              <h2 className="mt-2 text-3xl font-semibold text-white">{headerTitle}</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{headerSubtitle}</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-300">
-              <Radio className="h-4 w-4 animate-pulse" />
-              {livePulse}
-            </div>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {/* AI Health compact */}
-            <div className="col-span-1 xl:col-span-1">
-              <AIHealth confidence={avgConfidence / 100} agents={agentHealth.map((a) => ({ name: a.agent, status: a.status, latency: a.latency, confidence: a.confidence }))} queueCount={Math.max(0, incidents.length - stats.reviewed)} />
-            </div>
-            {liveMetrics.map((metric) => (
-              <div key={metric.label} className="rounded-[24px] border border-white/10 bg-white/5 p-4 transition-transform duration-300 hover:-translate-y-1">
-                <p className="text-sm text-slate-400">{metric.label}</p>
-                <p className="mt-3 text-3xl font-semibold text-white">{metric.value}</p>
-                <p className="mt-2 text-sm text-cyan-200">{metric.trend}</p>
+          <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+            <div className="space-y-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.35em] text-cyan-200">Operations center</p>
+                  <h2 className="mt-2 text-3xl font-semibold text-white">{headerTitle}</h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{headerSubtitle}</p>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 shadow-sm shadow-emerald-500/10">
+                  <Radio className="h-4 w-4 animate-pulse" />
+                  {livePulse}
+                </div>
               </div>
-            ))}
+              <div className="grid gap-4 md:grid-cols-2">
+                {liveMetrics.map((metric, index) => {
+                  const accent = index % 4 === 0 ? 'cyan' : index % 4 === 1 ? 'emerald' : index % 4 === 2 ? 'amber' : 'rose' as const;
+                  return <MetricCard key={metric.label} title={metric.label} value={metric.value} detail={metric.trend} accent={accent} />;
+                })}
+              </div>
+            </div>
+            <div className="grid gap-4">
+              <AIHealth confidence={avgConfidence / 100} agents={agentHealth.map((a) => ({ name: a.agent, status: a.status, latency: a.latency, confidence: a.confidence }))} queueCount={Math.max(0, incidents.length - stats.reviewed)} />
+              <div className="rounded-[24px] border border-white/10 bg-white/5 p-5 text-center text-slate-300">
+                <p className="text-sm uppercase tracking-[0.25em] text-cyan-200">System uptime</p>
+                <p className="mt-3 text-4xl font-semibold text-white">{uptime}</p>
+                <p className="mt-2 text-sm text-slate-400">Optimized for reliable operations and service continuity.</p>
+              </div>
+            </div>
           </div>
         </section>
 

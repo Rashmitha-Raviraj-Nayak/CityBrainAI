@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState } from 'react';
+import { StatusBadge } from '@/components/ui-primitives';
 import { getHealthStatus } from '@/lib/api';
 import { getIncidentStats, subscribeToIncidents, type IncidentRecord } from '@/services/incident-service';
 
@@ -54,8 +55,13 @@ export const RuntimeSummary = memo(function RuntimeSummary() {
     return (
       <aside className="space-y-4">
         <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
-          <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">Backend status</p>
-          <h3 className="mt-3 text-2xl font-semibold text-white">{health.status}</h3>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">Backend status</p>
+              <h3 className="mt-3 text-2xl font-semibold text-white">{health.status}</h3>
+            </div>
+            <StatusBadge status={health.status} />
+          </div>
           <p className="mt-3 text-sm text-slate-300">The API is currently serving the runtime and health endpoints.</p>
         </section>
         <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
