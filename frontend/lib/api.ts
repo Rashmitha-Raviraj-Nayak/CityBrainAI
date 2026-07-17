@@ -21,6 +21,12 @@ export type RuntimeResponse = {
     confidence: number;
     officer_brief: string;
     agent_results: Array<Record<string, unknown>>;
+    workflow_status?: {
+      selected_agents: string[];
+      successful_agents: string[];
+      failed_agents: string[];
+      confidence: number;
+    };
   };
   explanation: {
     summary: string;

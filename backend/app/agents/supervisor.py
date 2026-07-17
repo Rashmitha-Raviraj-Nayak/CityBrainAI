@@ -8,6 +8,7 @@ structured trace events without directly calling external services.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from collections.abc import Sequence
 from typing import Any
@@ -213,9 +214,10 @@ class SupervisorAgent:
             raise ValueError("Runtime context input_data must be a dictionary")
 
     def _execute_agents(self, context: RuntimeContext, selected_agents: Sequence[str]) -> list[AgentResult]:
-        """Execute each selected agent through the registry."""
+        """Execute each selected agent through the registry with timing and retry handling."""
 
         results: list[AgentResult] = []
+        execution_trace: list[dict[str, Any]] = []
         for agent_name in selected_agents:
             self._tracer.record(
                 context.execution_id,
@@ -224,8 +226,55 @@ class SupervisorAgent:
                 payload={"agent_name": agent_name},
             )
             agent = self._agent_registry.get(agent_name)
-            result = agent.execute(context)
+            last_error: str | None = None
+            result: AgentResult | None = None
+            for attempt in range(2):
+                started = time.perf_counter()
+                try:
+                    result = agent.execute(context)
+                except Exception as exc:  # pragma: no cover - defensive runtime path
+                    last_error = str(exc)
+                    result = AgentResult(
+                        agent_name=agent_name,
+                        status=RuntimeStatus.FAILED,
+                        summary=f"Agent {agent_name} failed during execution.",
+                        confidence=0.0,
+                        details={"error": str(exc)},
+                    )
+                elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+                if result is not None:
+                    result = result.model_copy(update={"execution_time_ms": elapsed_ms})
+                if result is None or result.status == RuntimeStatus.SUCCESS:
+                    break
+                if attempt == 0:
+                    self._tracer.record(
+                        context.execution_id,
+                        "agent_retry",
+                        f"Retrying agent {agent_name} after an initial failure",
+                        payload={"agent_name": agent_name, "error": last_error},
+                    )
+                    continue
+                break
+
+            if result is None:
+                result = AgentResult(
+                    agent_name=agent_name,
+                    status=RuntimeStatus.FAILED,
+                    summary=f"Agent {agent_name} could not be executed.",
+                    confidence=0.0,
+                    details={"error": last_error or "Unknown error"},
+                )
+
             results.append(result)
+            execution_trace.append(
+                {
+                    "agent": agent_name,
+                    "status": result.status.value,
+                    "confidence": round(result.confidence, 3),
+                    "execution_time_ms": round(result.execution_time_ms, 2),
+                    "summary": result.summary,
+                }
+            )
             if agent_name == "decision" and result.status == RuntimeStatus.SUCCESS:
                 context.state["decision_confidence"] = result.confidence
             if agent_name == "validation" and result.status == RuntimeStatus.SUCCESS:
@@ -239,10 +288,11 @@ class SupervisorAgent:
                 )
                 break
 
+        context.state["workflow_steps"] = execution_trace
         context.state.setdefault("reasoning_trace", []).append(
             {
                 "agent": "supervisor",
-                "output": {"selected_agents": selected_agents},
+                "output": {"selected_agents": list(selected_agents), "workflow_steps": execution_trace},
                 "why": "Supervisor completed the planned execution sequence.",
             }
         )
@@ -255,12 +305,63 @@ class SupervisorAgent:
         results: Sequence[AgentResult],
     ) -> SupervisorDecision:
         """Aggregate agent results into a structured supervisor decision."""
-
         successful_results = [result for result in results if result.status == RuntimeStatus.SUCCESS]
         confidence = round(sum(result.confidence for result in successful_results) / max(1, len(successful_results)), 3)
-        summary = (
-            f"Completed workflow {workflow_name} with {len(successful_results)} successful agent execution(s)."
-        )
+        summary = f"Completed workflow {workflow_name} with {len(successful_results)} successful agent execution(s)."
+
+        # Build reasoning steps and aggregate key fields from agent outputs
+        reasoning_steps: list[dict[str, Any]] = []
+        final_category = None
+        final_severity = None
+        final_priority = None
+        final_risk = 0
+        assigned_department = None
+        action_plan: list[str] = []
+        long_term_plan: list[str] = []
+        resource_requirements: list[str] = []
+        estimated_resolution = None
+        citizen_impact = ""
+        validation_score = 0.0
+
+        for res in results:
+            reasoning_steps.append({"agent": res.agent_name, "summary": res.summary, "confidence": res.confidence, "details": res.details})
+            details = res.details or {}
+            if res.agent_name == "understanding":
+                final_category = details.get("normalized_issue", {}).get("category") if isinstance(details.get("normalized_issue"), dict) else details.get("category")
+                assigned_department = details.get("department") or assigned_department
+            if res.agent_name == "vision":
+                final_severity = details.get("severity_estimate") or details.get("severity") or final_severity
+            if res.agent_name == "prediction":
+                final_risk = int(details.get("risk_score") or details.get("risk") or details.get("risk_score", 0))
+                final_priority = details.get("predicted_risk_level") or details.get("priority") or final_priority
+                estimated_resolution = details.get("time_horizon") or details.get("resolution_time") or estimated_resolution
+            if res.agent_name == "decision":
+                action_plan = details.get("recommended_actions") or details.get("actions") or action_plan
+                long_term_plan = details.get("assumptions") or details.get("recommendations") or long_term_plan
+                resource_requirements = [details.get("estimated_resource_type")] if details.get("estimated_resource_type") else resource_requirements
+                assigned_department = details.get("recommended_departments") and details.get("recommended_departments")[0] or assigned_department
+            if res.agent_name == "validation":
+                validation_score = float(details.get("score") or details.get("validation_score") or 0.0)
+
+        final_report = {
+            "incident_id": str(uuid.uuid4()),
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "executive_summary": summary,
+            "category": final_category or "uncategorized",
+            "severity": final_severity or "unknown",
+            "priority": final_priority or "medium",
+            "risk_score": final_risk,
+            "assigned_department": assigned_department or "unassigned",
+            "confidence": confidence,
+            "reasoning_steps": reasoning_steps,
+            "action_plan": action_plan,
+            "long_term_plan": long_term_plan,
+            "citizen_impact": citizen_impact,
+            "resource_requirements": resource_requirements,
+            "estimated_resolution": estimated_resolution or "unknown",
+            "validation_score": validation_score,
+        }
+
         return SupervisorDecision(
             workflow_name=workflow_name,
             selected_agents=list(selected_agents),
@@ -269,6 +370,7 @@ class SupervisorAgent:
             details={
                 "successful_agents": [result.agent_name for result in successful_results],
                 "result_count": len(results),
+                "final_report": final_report,
             },
         )
 

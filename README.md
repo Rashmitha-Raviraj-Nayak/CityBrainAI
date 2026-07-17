@@ -27,6 +27,13 @@ flowchart LR
 
 ## Local development
 
+### Prerequisites
+
+- Python 3.11+
+- Node.js 20+
+- Firebase project with Authentication, Firestore, and Storage enabled
+- Gemini API key if you want live AI responses
+
 ### Backend
 
 ```bash
@@ -51,12 +58,17 @@ npm run dev
 cd backend
 .venv\Scripts\python.exe -m pytest app/tests -q
 cd ../frontend
+npm install
+npm run lint
+npm run typecheck
 npm run build
 ```
 
 ## Deployment
 
 - Copy [.env.example](.env.example) to .env and set your values.
+- Frontend variables should be exposed to the Next.js app as `NEXT_PUBLIC_*` values.
+- Backend variables should be provided through the environment expected by the FastAPI settings layer.
 - Build services with Docker Compose:
 
 ```bash

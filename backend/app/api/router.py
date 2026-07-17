@@ -114,6 +114,12 @@ def _adapt_response(result: CityRuntimeResult) -> RuntimeResponse:
             "confidence": _confidence(decision_result.get("confidence_score"), supervisor_confidence),
             "officer_brief": result.summary,
             "agent_results": agent_results,
+            "workflow_status": {
+                "selected_agents": supervisor_data.get("details", {}).get("selected_agents", []),
+                "successful_agents": [item.get("agent_name") for item in agent_results if item.get("status") == RuntimeStatus.SUCCESS.value],
+                "failed_agents": [item.get("agent_name") for item in agent_results if item.get("status") != RuntimeStatus.SUCCESS.value],
+                "confidence": supervisor_confidence,
+            },
         },
         explanation={
             "summary": result.summary,

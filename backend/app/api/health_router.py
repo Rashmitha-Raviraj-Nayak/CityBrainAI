@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.schemas.health_schema import HealthResponse
 from app.services.health_service import HealthService
@@ -10,10 +10,11 @@ from app.services.health_service import HealthService
 router = APIRouter(prefix="/health", tags=["health"])
 
 
-def get_health_service() -> HealthService:
+def get_health_service(request: Request) -> HealthService:
     """Create a health service instance for dependency injection."""
 
-    return HealthService()
+    startup_ready = bool(getattr(request.app.state, "startup_complete", True))
+    return HealthService(startup_ready=startup_ready)
 
 
 @router.get("", response_model=HealthResponse)

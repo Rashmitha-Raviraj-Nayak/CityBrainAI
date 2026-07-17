@@ -22,6 +22,9 @@ class HealthStatus(BaseModel):
 class HealthService:
     """Service for reporting health and readiness state."""
 
+    def __init__(self, startup_ready: bool = True) -> None:
+        self.startup_ready = startup_ready
+
     def get_status(self) -> HealthStatus:
         """Return the current readiness state of the backend."""
 
@@ -29,9 +32,10 @@ class HealthService:
             "runtime": True,
             "logging": True,
             "configuration": True,
+            "startup": self.startup_ready,
         }
         return HealthStatus(
             status="ok" if all(checks.values()) else "degraded",
-            runtime_ready=True,
+            runtime_ready=self.startup_ready,
             checks=checks,
         )

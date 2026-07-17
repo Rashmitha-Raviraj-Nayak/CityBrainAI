@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowRight, Cpu, ShieldCheck, Sparkles } from 'lucide-react';
 
 const highlights = [
   'Predictive triage and risk scoring',
@@ -26,9 +27,10 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/dashboard"
-              className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
+              className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
             >
               Open Operations Console
+              <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/report"
@@ -38,13 +40,13 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
-            <Link href="/workflow" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40">
+            <Link href="/workflow" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40 hover:bg-cyan-500/10">
               Agent workflow
             </Link>
-            <Link href="/explainability" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40">
+            <Link href="/explainability" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40 hover:bg-cyan-500/10">
               Explainability trace
             </Link>
-            <Link href="/admin" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40">
+            <Link href="/admin" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-400/40 hover:bg-cyan-500/10">
               Supervisor view
             </Link>
           </div>

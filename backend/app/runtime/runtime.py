@@ -90,6 +90,7 @@ class AgentResult(BaseModel):
     summary: str
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     details: dict[str, Any] = Field(default_factory=dict)
+    execution_time_ms: float = Field(default=0.0, ge=0.0)
 
 
 class ToolResult(BaseModel):

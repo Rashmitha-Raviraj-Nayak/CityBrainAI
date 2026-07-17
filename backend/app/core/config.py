@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ApplicationSettings(BaseModel):
     """Application-wide runtime settings."""
+
+    model_config = ConfigDict(extra="forbid")
 
     environment: Literal["development", "testing", "production"] = Field(
         default="development",
@@ -25,6 +28,8 @@ class ApplicationSettings(BaseModel):
 class GeminiSettings(BaseModel):
     """Settings for Google Gemini model access."""
 
+    model_config = ConfigDict(extra="forbid")
+
     api_key: str = Field(default="", description="Google Gemini API key.")
     model: str = Field(default="gemini-2.5-flash", description="Gemini model identifier.")
     temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="Model temperature.")
@@ -34,6 +39,8 @@ class GeminiSettings(BaseModel):
 
 class FirebaseSettings(BaseModel):
     """Settings for Firebase and Firestore integration."""
+
+    model_config = ConfigDict(extra="forbid")
 
     project_id: str = Field(default="", description="Google Cloud Firebase project identifier.")
     storage_bucket: str | None = Field(default=None, description="Firebase Storage bucket name.")
@@ -45,6 +52,8 @@ class FirebaseSettings(BaseModel):
 class GoogleMapsSettings(BaseModel):
     """Settings for Google Maps platform integration."""
 
+    model_config = ConfigDict(extra="forbid")
+
     api_key: str = Field(default="", description="Google Maps API key.")
     enabled: bool = Field(default=False, description="Whether Google Maps services are enabled.")
     default_latitude: float = Field(default=37.7749, description="Default latitude for location-based workflows.")
@@ -55,6 +64,8 @@ class GoogleMapsSettings(BaseModel):
 class SecuritySettings(BaseModel):
     """Security-related runtime settings."""
 
+    model_config = ConfigDict(extra="forbid")
+
     jwt_secret_key: str = Field(default="development-secret-key", description="Secret key used to sign internal JWTs.")
     jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm.")
     jwt_access_token_expire_minutes: int = Field(default=60, ge=1, description="JWT access token lifetime.")
@@ -64,6 +75,8 @@ class SecuritySettings(BaseModel):
 
 class LoggingSettings(BaseModel):
     """Structured logging configuration."""
+
+    model_config = ConfigDict(extra="forbid")
 
     level: str = Field(default="INFO", description="Default logging level.")
     format: str = Field(default="standard", description="Logging formatter style.")
@@ -83,6 +96,8 @@ class LoggingSettings(BaseModel):
 
 class CorsSettings(BaseModel):
     """Cross-origin request configuration."""
+
+    model_config = ConfigDict(extra="forbid")
 
     allowed_origins: list[str] = Field(default_factory=lambda: ["*"], description="Allowed origins for CORS.")
 
@@ -118,6 +133,28 @@ class Settings(BaseSettings):
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     cors: CorsSettings = Field(default_factory=CorsSettings)
+
+    def __init__(self, **values: Any) -> None:
+        direct_gemini_values: dict[str, Any] = {}
+        for env_name, field_name in {
+            "GEMINI_API_KEY": "api_key",
+            "GEMINI_MODEL": "model",
+            "GEMINI_TEMPERATURE": "temperature",
+            "GEMINI_MAX_OUTPUT_TOKENS": "max_output_tokens",
+            "GEMINI_REQUEST_TIMEOUT_SECONDS": "request_timeout_seconds",
+        }.items():
+            env_value = os.getenv(env_name)
+            if env_value is not None and env_value != "":
+                direct_gemini_values[field_name] = env_value
+
+        if direct_gemini_values:
+            existing_gemini = values.get("gemini")
+            if isinstance(existing_gemini, dict):
+                values["gemini"] = {**existing_gemini, **direct_gemini_values}
+            else:
+                values["gemini"] = direct_gemini_values
+
+        super().__init__(**values)
 
     @property
     def is_development(self) -> bool:

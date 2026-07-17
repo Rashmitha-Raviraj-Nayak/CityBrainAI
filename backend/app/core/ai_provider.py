@@ -16,6 +16,11 @@ from urllib import error, request
 
 from pydantic import BaseModel, ConfigDict, Field
 
+try:
+    import google.generativeai as genai
+except ImportError:  # pragma: no cover - optional dependency fallback
+    genai = None
+
 from app.core.config import Settings, get_settings
 
 logger = logging.getLogger("citybrain.core.ai_provider")
@@ -49,6 +54,7 @@ class ProviderRequest(BaseModel):
     temperature: float | None = Field(default=None, ge=0.0, le=1.0, description="Sampling temperature")
     max_output_tokens: int | None = Field(default=None, ge=1, description="Maximum tokens for the response")
     timeout_seconds: int | None = Field(default=None, ge=1, description="Request timeout in seconds")
+    stream: bool = Field(default=False, description="Whether to request a streaming response")
     safety_settings: SafetySettings | None = Field(default=None, description="Safety threshold configuration")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional request metadata")
 
@@ -101,6 +107,24 @@ class GeminiProvider(AIProvider):
         self._settings = settings or get_settings()
         self._logger = logger_instance or logger
         self._max_retries = max(0, max_retries)
+        # Initialize optional SDK client once and reuse
+        self._sdk_available = False
+        self._sdk_model = None
+        self._cache: dict[tuple, ProviderResponse] = {}
+        self._cache_max = 128
+        if genai is not None and self._settings.gemini.api_key:
+            try:
+                genai.configure(api_key=self._settings.gemini.api_key)
+                # create a reusable model handle where supported by the SDK
+                try:
+                    self._sdk_model = genai.GenerativeModel(self._settings.gemini.model)
+                    self._sdk_available = True
+                except Exception:
+                    # Some SDK versions defer model construction to call time; keep available flag anyway
+                    self._sdk_available = True
+            except Exception as exc:  # pragma: no cover - defensive
+                self._logger.warning("Failed to configure Gemini SDK: %s", str(exc))
+                self._sdk_available = False
 
     def generate(self, prompt: str, *, temperature: float | None = None, max_output_tokens: int | None = None, timeout_seconds: int | None = None) -> str:
         """Synchronously generate text from a prompt using the Gemini API."""
@@ -135,12 +159,13 @@ class GeminiProvider(AIProvider):
                 retryable=False,
             )
 
-        endpoint = self._build_endpoint(request)
-        payload = self._build_payload(request)
-        timeout = request.timeout_seconds or self._settings.gemini.request_timeout_seconds
-
         for attempt in range(self._max_retries + 1):
             try:
+                if self._use_sdk():
+                    return await self._generate_with_sdk(request)
+                endpoint = self._build_endpoint(request)
+                payload = self._build_payload(request)
+                timeout = request.timeout_seconds or self._settings.gemini.request_timeout_seconds
                 raw_response = await asyncio.to_thread(self._send_request, endpoint, payload, timeout)
                 return self._parse_response(raw_response, request)
             except ProviderError as exc:
@@ -186,6 +211,8 @@ class GeminiProvider(AIProvider):
         if not self._settings.gemini.api_key:
             raise ProviderError("Gemini API key is not configured.", code="missing_api_key", retryable=False)
 
+        if self._use_sdk():
+            return self._generate_with_sdk_sync(request_payload)
         endpoint = self._build_endpoint(request_payload)
         payload = self._build_payload(request_payload)
         timeout = request_payload.timeout_seconds or self._settings.gemini.request_timeout_seconds
@@ -223,6 +250,104 @@ class GeminiProvider(AIProvider):
                 retryable=False,
                 details={"error": str(exc)},
             ) from exc
+
+    def _use_sdk(self) -> bool:
+        """Return True when the optional SDK is installed and available for execution."""
+
+        return genai is not None and bool(self._settings.gemini.api_key) and self._sdk_available
+
+    def _generate_with_sdk(self, request_payload: ProviderRequest) -> ProviderResponse:
+        """Use the Google Generative AI SDK when it is available and configured."""
+
+        if genai is None:
+            raise ProviderError("Google Generative AI SDK is not installed.", code="sdk_unavailable", retryable=False)
+
+        try:
+            # reuse model handle when available
+            model = self._sdk_model or genai.GenerativeModel(self._settings.gemini.model)
+            generation_config = {
+                "temperature": request_payload.temperature if request_payload.temperature is not None else self._settings.gemini.temperature,
+                "max_output_tokens": request_payload.max_output_tokens if request_payload.max_output_tokens is not None else self._settings.gemini.max_output_tokens,
+            }
+            if request_payload.response_format == "json":
+                generation_config["response_mime_type"] = "application/json"
+
+            prompt_parts = [request_payload.prompt]
+            if request_payload.system_instruction:
+                prompt_parts.insert(0, f"System instruction: {request_payload.system_instruction}")
+
+            result = model.generate_content(
+                prompt_parts,
+                generation_config=generation_config,
+                stream=request_payload.stream,
+            )
+            # simple response caching for repeated prompts
+            try:
+                key = (request_payload.prompt, request_payload.response_format, float(generation_config.get("temperature", 0)), int(generation_config.get("max_output_tokens", 0)))
+            except Exception:
+                key = None
+            parsed = self._parse_sdk_response(result, request_payload)
+            if key is not None:
+                if len(self._cache) >= self._cache_max:
+                    # drop oldest item
+                    self._cache.pop(next(iter(self._cache)))
+                self._cache[key] = parsed
+            return parsed
+        except Exception as exc:  # pragma: no cover - runtime fallback path
+            raise ProviderError(
+                "Gemini SDK request failed.",
+                code="sdk_error",
+                retryable=True,
+                details={"error": str(exc)},
+            ) from exc
+
+    def _generate_with_sdk_sync(self, request_payload: ProviderRequest) -> ProviderResponse:
+        """Synchronous wrapper for SDK-backed generation."""
+
+        return asyncio.run(self._generate_with_sdk(request_payload))
+
+    def _parse_sdk_response(self, response: Any, request_payload: ProviderRequest) -> ProviderResponse:
+        """Normalize SDK responses into the provider response model."""
+
+        if hasattr(response, "text") and isinstance(response.text, str) and response.text.strip():
+            text_value = response.text.strip()
+        else:
+            text_value = ""
+            if hasattr(response, "parts"):
+                for part in response.parts:
+                    if hasattr(part, "text") and isinstance(part.text, str):
+                        text_value += part.text
+            elif hasattr(response, "candidates"):
+                for candidate in response.candidates:
+                    content = getattr(candidate, "content", None)
+                    if content is None:
+                        continue
+                    for part in getattr(content, "parts", []) or []:
+                        if hasattr(part, "text") and isinstance(part.text, str):
+                            text_value += part.text
+
+        if not text_value:
+            raise ProviderError("Gemini SDK returned an empty response.", code="empty_content", retryable=False)
+
+        json_data: dict[str, Any] | None = None
+        if request_payload.response_format == "json":
+            try:
+                json_data = json.loads(text_value)
+            except json.JSONDecodeError as exc:
+                raise ProviderError(
+                    "Gemini SDK returned invalid JSON content.",
+                    code="invalid_json_response",
+                    retryable=False,
+                    details={"raw_text": text_value},
+                ) from exc
+
+        return ProviderResponse(
+            text=text_value if request_payload.response_format == "text" else None,
+            json_data=json_data,
+            model=self._settings.gemini.model,
+            finish_reason=None,
+            usage=getattr(response, "usage_metadata", None) or {},
+        )
 
     def _build_endpoint(self, request_payload: ProviderRequest) -> str:
         """Construct the REST endpoint for the requested model."""

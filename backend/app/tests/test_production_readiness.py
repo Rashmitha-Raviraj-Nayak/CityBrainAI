@@ -24,3 +24,15 @@ def test_security_headers_are_present() -> None:
     assert response.status_code == 200
     assert response.headers.get("x-content-type-options") == "nosniff"
     assert response.headers.get("x-frame-options") == "DENY"
+
+
+def test_readiness_reports_startup_state() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["checks"]["startup"] is True
+    assert payload["runtime_ready"] is True
