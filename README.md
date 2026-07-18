@@ -1,56 +1,88 @@
 # CityBrain AI
 
-CityBrain AI is an AI-powered civic operations platform that combines shared incident state, multi-agent reasoning, and an intuitive operator experience to support incident intake, triage, explainability, and decision support.
+**CityBrain AI** is an AI-powered civic operations platform that combines shared incident state, multi-agent reasoning, explainable AI, and a modern operator experience to support incident intake, triage, prediction, decision support, and operational oversight.
 
-It is designed for public-sector and enterprise teams that need faster situational awareness, structured workflows, and more transparent AI-assisted decision-making.
+The platform is designed for public-sector and enterprise teams that need:
+
+- Faster situational awareness
+- Structured incident processing
+- AI-assisted operational decision-making
+- Transparent and explainable AI workflows
+- Human oversight for sensitive decisions
 
 ---
 
 ## Overview
 
-CityBrain AI enables operators to:
+CityBrain AI enables operators to capture civic incidents, process them through an AI-assisted workflow, and review structured recommendations with explainability.
 
-- Capture and structure civic incidents
-- Analyze incidents using specialized AI agents
-- Prioritize and predict potential outcomes
-- Generate structured recommendations
-- Review explainability and reasoning traces
-- Support human oversight and operational decision-making
+The platform follows a supervisor-led multi-agent architecture where specialized agents collaborate to analyze incidents across multiple stages:
 
-The platform combines a modern web interface with a FastAPI backend and a supervisor-led multi-agent AI workflow.
+1. **Vision** — Extracts relevant information from visual inputs.
+2. **Understanding** — Interprets the incident context and identifies key details.
+3. **Prediction** — Estimates potential outcomes, risks, and future developments.
+4. **Decision** — Generates structured recommendations and possible actions.
+5. **Validation** — Reviews outputs for consistency, safety, and reliability.
+
+The result is a structured decision-support workflow that combines AI automation with human oversight.
 
 ---
 
 ## Key Capabilities
 
-- **Incident Intake**  
-  Capture and process structured civic reports.
+### Incident Intake
 
-- **Multi-Agent Analysis**  
-  Coordinate specialized agents for vision, understanding, prediction, decision-making, and validation.
+Capture and process structured civic reports, including incident details, descriptions, location information, and supporting evidence.
 
-- **Explainable AI**  
-  Surface reasoning traces and structured decision paths for operator review.
+### Multi-Agent Analysis
 
-- **Operational Dashboard**  
-  Provide dashboards, analytics, workflow views, and administrative oversight.
+Coordinate specialized AI agents for:
 
-- **AI and Cloud Integrations**  
-  Support configurable integrations with Google Gemini, Firebase, and mapping services.
+- Visual analysis
+- Incident understanding
+- Risk and outcome prediction
+- Decision support
+- Output validation
 
-- **Human-in-the-Loop Workflows**  
-  Enable validation and human review for sensitive operational decisions.
+### Explainable AI
+
+Expose reasoning traces and structured agent outputs so operators can understand how recommendations were generated.
+
+### Operational Dashboard
+
+Provide interfaces for:
+
+- Incident monitoring
+- Analytics
+- Workflow tracking
+- Operational oversight
+- Administrative management
+
+### AI and Cloud Integrations
+
+Support configurable integrations with:
+
+- Google Gemini
+- Firebase Authentication
+- Firestore-compatible services
+- Google Maps and location services
+
+### Human-in-the-Loop Decision Support
+
+The platform is designed to assist human operators rather than replace human judgment. Sensitive decisions can be reviewed and validated before action.
 
 ---
 
-## System Architecture
+# System Architecture
 
-The platform follows a frontend-to-backend workflow built around a shared incident state and a supervisor-led multi-agent pipeline.
+CityBrain AI follows a frontend-to-backend workflow built around a shared incident state and a supervisor-led multi-agent pipeline.
 
 ```mermaid
 flowchart LR
     User[Operator / Citizen] --> Frontend[Next.js Frontend]
+
     Frontend --> API[FastAPI Runtime API]
+
     API --> Runtime[CityRuntime]
 
     Runtime --> Supervisor[Supervisor Agent]
