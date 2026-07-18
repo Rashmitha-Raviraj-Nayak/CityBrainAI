@@ -4,8 +4,8 @@
 
 CityBrain AI was verified locally against the running frontend and backend services on July 15, 2026.
 
-- Frontend URL: http://127.0.0.1:3000
-- Backend URL: http://127.0.0.1:8000
+- Frontend URL: http://localhost:3001
+- Backend URL: http://localhost:8000
 - Verification mode: live browser smoke test + direct API calls
 
 ## Environment Check
