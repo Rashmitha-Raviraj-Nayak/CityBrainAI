@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BookOpen, CircleHelp, Info, MessageSquareText, Search, Settings2, Sparkles, SunMedium, X } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { BookOpen, CircleHelp, Info, MessageSquareText, Search, Sparkles, SunMedium, X } from 'lucide-react';
 
 interface DialogProps {
   open: boolean;
@@ -25,7 +25,7 @@ export function ModalDialog({ open, title, description, children, onClose }: Dia
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-slate-900/95 p-6 shadow-2xl shadow-black/50" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-slate-900/95 p-4 shadow-2xl shadow-black/50 sm:p-6" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.35em] text-cyan-200">{title}</p>

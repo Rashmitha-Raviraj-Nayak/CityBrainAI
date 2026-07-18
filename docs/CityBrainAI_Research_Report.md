@@ -392,40 +392,6 @@ The following features are realistic and aligned with current research trends an
 
 ---
 
-## Section 9: Roadmap
-
-### Immediate (0–2 weeks)
-
-- Improve the demo narrative and UI flow
-- Add clearer explainability panels
-- Add incident history and trend views
-- Harden the incident state model
-- Create a polished showcase workflow for judges
-
-### 1 Month
-
-- Add richer geospatial visualizations
-- Add historical trend analytics
-- Add incident summarization and confidence display
-- Add stronger operator feedback loops
-- Improve resilience and logging
-
-### 3 Months
-
-- Add department routing and dispatch recommendations
-- Add voice transcription and multilingual support
-- Integrate with municipal service systems or mock APIs
-- Add anomaly detection and clustering
-- Improve auditability and governance controls
-
-### 6 Months
-
-- Add edge AI pilot modes and privacy-preserving preprocessing
-- Add digital-twin-style scenario planning
-- Add federated learning prototypes across departments
-- Strengthen deployment and security readiness
-- Prepare a public research paper or technical report
-
 ### Future Research
 
 - Multi-agent urban resilience modeling

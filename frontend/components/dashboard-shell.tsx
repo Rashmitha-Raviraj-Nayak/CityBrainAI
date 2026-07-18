@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-provider';
 import { AboutModal, HelpCenterModal, LogoutConfirmModal, SettingsModal } from '@/components/ui-dialogs';
@@ -77,6 +77,7 @@ const MemoizedNavLink = memo(NavLink);
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -259,7 +260,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                   <div className="mt-3 space-y-2">
-                    <button type="button" className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10" onClick={() => { closePanels(); setSettingsOpen(true); }}>
+                    <button type="button" className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10" onClick={() => { closePanels(); router.push('/settings'); }}>
                       <Settings2 className="h-4 w-4 text-cyan-200" />
                       Settings
                     </button>
@@ -300,7 +301,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {[...primaryItems, ...overflowItems].map((item) => (
                 <MemoizedNavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={() => setMobileOpen(false)} />
               ))}
-              <button type="button" onClick={() => { void logout(); setMobileOpen(false); }} className="mt-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-slate-300">
+              <button type="button" onClick={() => { setMobileOpen(false); setLogoutOpen(true); }} className="mt-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-slate-300">
                 Sign out
               </button>
             </div>
